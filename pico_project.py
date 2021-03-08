@@ -31,6 +31,7 @@ VSCODE_C_PROPERTIES_FILENAME = 'c_cpp_properties.json'
 VSCODE_SETTINGS_FILENAME ='settings.json'
 VSCODE_EXTENSIONS_FILENAME ='extensions.json'
 VSCODE_FOLDER='.vscode'
+INCLUDE_FOLDER='include'
 
 CONFIG_UNSET="Not set"
 
@@ -777,7 +778,7 @@ def CheckPrerequisites():
 
 
 def CheckSDKPath(gui):
-    sdkPath = os.getenv('PICO_SDK_PATH')
+    sdkPath = '/home/antosik/Pico/pico-sdk/'
 
     if sdkPath == None:
         m = 'Unable to locate the Raspberry Pi Pico SDK, PICO_SDK_PATH is not set'
@@ -927,6 +928,10 @@ def GenerateCMake(folder, params):
 
     file.write(cmake_header3)
 
+    #Add a folder with your own libraries
+    file.write('#Folder for your own libraries\n')
+    file.write('include_directories(include)\n')
+    
     # add the preprocessor defines for overall configuration
     if params.configs:
         file.write('# Add any PICO_CONFIG entries specified in the Advanced settings\n')
@@ -941,10 +946,12 @@ def GenerateCMake(folder, params):
     # No GUI/command line to set a different executable name at this stage
     executableName = params.projectName
 
+    file.write('file(GLOB INCLUDES "include/*.c" "include/*.C" "include/*.c++" "include/*.cc" "include/*.cpp" "include/*.cxx" "include/*.cu" "include/*.m" "include/*.M" "include/*.mm" "include/*.h" "include/*.hh" "include/*.h++" "include/*.hm" "include/*.hpp" "include/*.hxx" "include/*.in" "include/*.txx")\n')
+
     if params.wantCPP:
-        file.write('add_executable(' + params.projectName + ' ' + params.projectName + '.cpp )\n\n')
+        file.write('add_executable(' + params.projectName + ' ' + params.projectName + '.cpp ${INCLUDES})\n\n')
     else:
-        file.write('add_executable(' + params.projectName + ' ' + params.projectName + '.c )\n\n')
+        file.write('add_executable(' + params.projectName + ' ' + params.projectName + '.c ${INCLUDES})\n\n')
 
     file.write('pico_set_program_name(' + params.projectName + ' "' + executableName + '")\n')
     file.write('pico_set_program_version(' + params.projectName + ' "0.1")\n\n')
@@ -1162,6 +1169,10 @@ def DoEverything(parent, params):
     GenerateMain('.', params.projectName, features_and_examples, params.wantCPP)
 
     GenerateCMake('.', params)
+    
+    # Create a Include folder
+    if not os.path.exists(INCLUDE_FOLDER):
+        os.mkdir(INCLUDE_FOLDER)
 
     # Create a build folder, and run our cmake project build from it
     if not os.path.exists('build'):
